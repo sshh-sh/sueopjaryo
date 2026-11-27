@@ -1,0 +1,11 @@
+# 개발용 가짜 시트
+dev/state.json
+*.tmp
+# 개인 자료·원본 데이터는 공개 저장소에 올리지 않음 (이 PC에만 보관)
+수업자료_정리본.csv
+수업자료_원본백업_*.csv
+tools/sheet.csv
+tools/tab2.csv
+tools/x6.json
+data.js
+mockup.html

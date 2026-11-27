@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>수업자료용</title>
+<meta name="theme-color" content="#1f7a5a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="images/ilhaeyong.jpg" type="image/jpeg">
+<link rel="apple-touch-icon" href="images/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <img class="logo" src="images/ilhaeyong.jpg" alt="" onclick="location.reload()" title="새로고침" style="cursor:pointer">
+    <h1>수업자료용</h1>
+    <span class="sync" id="sync" role="status" aria-live="polite"></span>
+    <div class="search" id="searchBox"><button class="ghost s-btn" id="btnSearch" aria-label="검색" title="검색"><i class="ti ti-search" aria-hidden="true"></i></button><input id="q" type="search" placeholder="제목·주제·메모 검색" aria-label="검색" tabindex="-1"></div>
+    <button class="primary" id="btnAdd"><i class="ti ti-plus" aria-hidden="true"></i><span class="btn-lbl"> 자료 추가</span></button>
+    <button class="ghost" id="btnSet" aria-label="설정" title="설정"><i class="ti ti-settings" aria-hidden="true"></i></button>
+  </header>
+  <div class="topics" id="topics"></div>
+  <div class="main">
+    <nav class="col left" id="left" aria-label="소주제"></nav>
+    <section class="col center" id="center"><div class="empty"><i class="ti ti-loader-2 spin" aria-hidden="true"></i> 불러오는 중…</div></section>
+  </div>
+  <footer class="app-footer">
+    © 2026 수업자료용 · 개발 최송희. 무단 복제 및 배포를 금지합니다.
+    <span class="version-badge" id="app-version">v.1</span>
+  </footer>
+</div>
+<div id="layer"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="core.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

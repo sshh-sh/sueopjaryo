@@ -1,0 +1,21 @@
+// 간단한 xlsx(풀어둔 폴더) → JSON 변환: 셀 값 + 하이퍼링크
+const fs=require('fs'),path=require('path');
+const dir=process.argv[2];const out=process.argv[3];
+const rd=p=>fs.existsSync(path.join(dir,p))?fs.readFileSync(path.join(dir,p),'utf8'):'';
+const dec=s=>s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(m,n)=>String.fromCharCode(+n)).replace(/&#x([0-9a-f]+);/gi,(m,n)=>String.fromCharCode(parseInt(n,16))).replace(/&amp;/g,'&');
+const txt=x=>dec([...x.matchAll(/<(?:\w+:)?t(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?t>/g)].map(m=>m[1]).join(''));
+const ss=[...rd('xl/sharedStrings.xml').matchAll(/<(?:\w+:)?si>([\s\S]*?)<\/(?:\w+:)?si>/g)].map(m=>txt(m[1]));
+const wb=rd('xl/workbook.xml');const wbr=rd('xl/_rels/workbook.xml.rels');
+const sheets=[...wb.matchAll(/<(?:\w+:)?sheet [^>]*name="([^"]+)"[^>]*r:id="([^"]+)"/g)].map(m=>{const t=(wbr.match(new RegExp('Id="'+m[2]+'"[^>]*Target="([^"]+)"'))||wbr.match(new RegExp('Target="([^"]+)"[^>]*Id="'+m[2]+'"')))[1];return{name:dec(m[1]),file:'xl/'+t.replace(/^\/?xl\//,'')}});
+const col=r=>{let n=0;for(const ch of r.replace(/\d+/,''))n=n*26+ch.charCodeAt(0)-64;return n-1};
+const res={};
+sheets.forEach(sh=>{const x=rd(sh.file);const rels=rd(sh.file.replace(/([^/]+)$/,'_rels/$1.rels'));
+  const relMap={};[...rels.matchAll(/<Relationship [^>]*>/g)].forEach(m=>{const id=(m[0].match(/Id="([^"]+)"/)||[])[1],t=(m[0].match(/Target="([^"]+)"/)||[])[1];if(id)relMap[id]=dec(t||'')});
+  const links={};[...x.matchAll(/<(?:\w+:)?hyperlink [^>]*>/g)].forEach(m=>{const ref=(m[0].match(/ref="([^"]+)"/)||[])[1],id=(m[0].match(/r:id="([^"]+)"/)||[])[1];if(ref&&id)links[ref.split(':')[0]]=relMap[id]});
+  const rows=[];[...x.matchAll(/<(?:\w+:)?c ([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:\w+:)?c>)/g)].forEach(m=>{const a=m[1],body=m[2]||'';const r=(a.match(/r="([A-Z]+\d+)"/)||[])[1];if(!r)return;
+    const t=(a.match(/t="([^"]+)"/)||[])[1];let v=(body.match(/<(?:\w+:)?v>([\s\S]*?)<\/(?:\w+:)?v>/)||[])[1];
+    if(t==='s')v=ss[+v];else if(t==='inlineStr')v=txt(body);else if(v!=null)v=dec(v);
+    const ri=+r.match(/\d+/)[0]-1,ci=col(r);(rows[ri]=rows[ri]||[])[ci]=v??'';if(links[r])(rows[ri].links=rows[ri].links||{})[ci]=links[r]});
+  res[sh.name]=rows.map((r,i)=>r?{row:i+1,cells:[...r].map(v=>v??''),links:r.links||{}}:null).filter(Boolean)});
+fs.writeFileSync(out,JSON.stringify(res));
+Object.entries(res).forEach(([k,v])=>console.log(k,v.length,'rows'));
