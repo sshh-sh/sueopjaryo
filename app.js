@@ -1,7 +1,7 @@
 /* 수업자료용 앱 — 구글 시트(수업자료 탭)를 GAS로 읽고 씀. 공통 로직은 core.js(SJ) */
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 // 배포한 GAS 웹앱 주소. 내 컴퓨터(localhost)에서 열면 개발 서버(/api)를 씀
-const GAS_URL_DEPLOYED = '';
+const GAS_URL_DEPLOYED = 'https://script.google.com/macros/s/AKfycbySBH8aDiXdqy3tE4_r4kr8QqqcerIyXXDa4n3_Z5BCJZ8uaT-5_A4sFhxThxiFkyg/exec';
 const IS_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const GAS_URL = IS_LOCAL ? '/api' : GAS_URL_DEPLOYED;
 const CACHE_KEY = 'sueopjaryo_cache_v1';
@@ -75,7 +75,9 @@ async function call(body) {
   if (!j.ok && j.code !== 'changed') throw new Error(j.error || '서버 오류');
   return j;
 }
+let server = { youtube: false };
 function accept(j) {
+  if (j.api) server = { api: j.api, youtube: !!j.youtube };
   if (j.data) { S = j.data; ver = j.ver; }
   if (j.usage) usage = j.usage;
   if (j.settings) settings = Object.assign({ classes: [], icons: {} }, j.settings);
@@ -106,7 +108,7 @@ async function pump() {
     const p = pend[0];
     setSync('busy', p.fill ? '영상 길이 채우는 중…' : '저장 중…');
     try {
-      const j = await call(p.fill ? { action: 'fillDur', ver, max: 8 } : { action: 'op', ver, op: p.op });
+      const j = await call(p.fill ? { action: 'fillDur', ver, max: 50 } : { action: 'op', ver, op: p.op });
       if (j.ok === false) { // 그새 시트가 바뀜 → 시트 내용으로 다시 맞춤
         pend.length = 0; accept(j); render(); toast('시트가 바뀌어 있어서 새로 불러왔어요. 방금 한 것은 다시 해 주세요'); break;
       }
@@ -426,5 +428,5 @@ function sharedLink() {
     if (dup) { toast('이미 있는 자료예요: ' + titleOf(dup)); openDetail(dup.id); }
     else { op({ type: 'add', item: { cat: INBOX, url: shared.url, title: shared.title } }); selInbox = true; selCat = null; render(); toast('미분류에 넣었어요'); }
   }
-  if (S.items.some(i => !i.dur && ytId(i.url))) queueFill();
+  if (server.youtube && S.items.some(i => !i.dur && ytId(i.url))) queueFill(); // 서버에 YouTube 서비스가 켜져 있을 때만
 })();

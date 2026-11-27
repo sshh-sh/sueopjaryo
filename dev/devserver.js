@@ -63,11 +63,19 @@ const UrlFetchApp = {  // 진짜 인터넷으로 가져옴 (curl)
     return { getResponseCode: () => code, getContentText: () => body };
   },
 };
-const ContentService = { MimeType: { JSON: 'json' }, createTextOutput: s => ({ s, setMimeType() { return this; } }) };
+const YouTube = {  // Apps Script 고급 서비스 흉내: 유튜브 페이지에서 길이를 읽어 같은 모양으로 돌려줌
+  Videos: { list(part, opt) {
+    return { items: String(opt.id).split(',').map(id => {
+      const t = UrlFetchApp.fetch('https://www.youtube.com/watch?v=' + id).getContentText().match(/"lengthSeconds":"(\d+)"/);
+      return t ? { id, contentDetails: { duration: 'PT' + Math.floor(t[1] / 60) + 'M' + (t[1] % 60) + 'S' } } : null;
+    }).filter(Boolean) };
+  } },
+};
+const ContentService ={ MimeType: { JSON: 'json' }, createTextOutput: s => ({ s, setMimeType() { return this; } }) };
 const LockService = { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) };
 
 function gas() {  // 매번 apps_script.gs 를 새로 읽어서 실행 (고치면 바로 반영)
-  const ctx = vm.createContext({ SpreadsheetApp, Utilities, UrlFetchApp, ContentService, LockService, console, JSON, Object, Math, Date, String });
+  const ctx = vm.createContext({ SpreadsheetApp, Utilities, UrlFetchApp, YouTube, ContentService, LockService, console, JSON, Object, Math, Date, String });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'apps_script.gs'), 'utf8'), ctx, { filename: 'apps_script.gs' });
   return ctx;
 }

@@ -71,7 +71,7 @@ function writeValues_(rows, old) {
 }
 function payload_() {
   var v = readValues_();
-  return { ok: true, ver: verOf_(v), data: SJ.normalize(SJ.parseTable(v)), usage: readUsage_(), settings: readSettings_() };
+  return { ok: true, api: 2, youtube: typeof YouTube !== 'undefined', ver: verOf_(v), data: SJ.normalize(SJ.parseTable(v)), usage: readUsage_(), settings: readSettings_() };
 }
 function doOp_(ver, op) {
   var v = readValues_();
@@ -96,15 +96,32 @@ function doOp_(ver, op) {
 function fillDur_(ver, max) {
   var v = readValues_();
   if (ver !== verOf_(v)) { var fresh = payload_(); fresh.ok = false; fresh.code = 'changed'; return fresh; }
-  var st = SJ.normalize(SJ.parseTable(v)), fields = {}, n = 0, left = 0;
+  var st = SJ.normalize(SJ.parseTable(v)), todo = [], left = 0;
   st.items.forEach(function (it, i) {
-    if (it.dur || !SJ.ytId(it.url)) return;
-    if (n >= max) { left++; return; }
-    n++; var m = meta_(SJ.links(it.url)[0] ? SJ.links(it.url)[0].url : it.url);
-    fields[i] = { dur: m.dur || '-' };   // 못 가져오면 '-' (다시 시도하지 않음)
+    var id = SJ.ytId(it.url); if (it.dur || !id) return;
+    if (todo.length >= max) { left++; return; }
+    todo.push({ i: i, id: id });
   });
-  if (n) writeValues_(SJ.serialize(SJ.applyOp(st, { type: 'setFields', fields: fields })), v);
-  var out = payload_(); out.left = left; out.filled = n; return out;
+  if (!todo.length) { var o0 = payload_(); o0.left = 0; o0.filled = 0; return o0; }
+  var durs = ytDurations_(todo.map(function (t) { return t.id; }));
+  if (!durs) { var o1 = payload_(); o1.left = 0; o1.filled = 0; o1.noService = true; return o1; } // YouTube 서비스가 없으면 아무것도 안 씀
+  var fields = {};
+  todo.forEach(function (t) { fields[t.i] = { dur: durs[t.id] || '-' }; });   // 유튜브에 없는 영상(삭제·비공개)만 '-'
+  writeValues_(SJ.serialize(SJ.applyOp(st, { type: 'setFields', fields: fields })), v);
+  var out = payload_(); out.left = left; out.filled = todo.length; return out;
+}
+/* 영상 길이: Apps Script의 고급 서비스 "YouTube Data API"로 한 번에 50개까지. 서비스를 안 켰으면 null */
+function ytDurations_(ids) {
+  if (typeof YouTube === 'undefined') return null;
+  var out = {};
+  for (var k = 0; k < ids.length; k += 50) {
+    var res = YouTube.Videos.list('contentDetails', { id: ids.slice(k, k + 50).join(','), maxResults: 50 });
+    (res.items || []).forEach(function (v) {
+      var m = String(v.contentDetails && v.contentDetails.duration || '').match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      if (m) out[v.id] = SJ.fmtDur((+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0)) || '0:00';
+    });
+  }
+  return out;
 }
 
 /* ---------- 링크 정보: 제목·영상 길이 ---------- */
@@ -118,6 +135,7 @@ function meta_(url) {
       var w = UrlFetchApp.fetch('https://www.youtube.com/watch?v=' + id + '&hl=ko', { muteHttpExceptions: true, headers: { 'Accept-Language': 'ko' } });
       var wt = w.getContentText(), m = wt.match(/"lengthSeconds":"(\d+)"/);
       if (m) out.dur = SJ.fmtDur(+m[1]);
+      if (!out.dur) { try { var dd = ytDurations_([id]); if (dd && dd[id]) out.dur = dd[id]; } catch (e2) { } }
       if (!out.title) { var tt = wt.match(/<meta[^>]+(?:name="title"|property="og:title")[^>]+content="([^"]+)"/); if (tt) out.title = tt[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'"); }
     } else {
       var p = UrlFetchApp.fetch(url, { muteHttpExceptions: true, followRedirects: true });
