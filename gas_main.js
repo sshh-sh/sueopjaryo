@@ -228,3 +228,6 @@ function saveSettings_(s) {
   var t = tab_(SET_TAB, ['항목', '값']);
   t.getRange(2, 1, 2, 2).setNumberFormat('@').setValues([['수업하는 반', cur.classes.join(', ')], ['대주제 아이콘', JSON.stringify(cur.icons)]]);
 }
+
+/* 편집기에서 한 번 실행하면 유튜브 읽기 권한을 허용하는 창이 뜸 */
+function 권한허용() { Logger.log(JSON.stringify(ytDurations_(['4FJi_Pkgcdk']))); }
